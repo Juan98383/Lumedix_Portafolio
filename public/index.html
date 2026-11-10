@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LuMedix - Gestión Empresarial</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- jspdf and autoTable for PDF generation -->
+    <script src="/vendor/jspdf.js"></script>
+    <script src="/vendor/autotable.js"></script>
+    <!-- xlsx for Excel generation -->
+    <script src="/vendor/xlsx.js"></script>
+    <!-- Chart.js for dashboard charts -->
+    <script src="/vendor/chart.js"></script>
+    <!-- FontAwesome for icons -->
+    <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo-container">
+                <a href="/" class="logo-link">
+                    <img src="0. Logo Lumedix.png" alt="LuMedix" class="logo-img" onerror="this.style.display='none'; document.querySelector('.logo-text-fallback').style.display='block'" />
+                </a>
+                <div class="logo-text-fallback" style="display:none;">LuMedix</div>
+            </div>
+            <nav class="nav-menu">
+                                <button class="nav-item active" data-target="dashboard"><i class="fas fa-chart-line"></i> Panel</button>
+                <button class="nav-item" data-target="periods"><i class="fas fa-calendar-alt"></i> Períodos</button>
+                <button class="nav-item" data-target="inventory"><i class="fas fa-box"></i> Inventario</button>
+                                    <button class="nav-item" data-target="sales"><i class="fas fa-handshake"></i> Ventas</button>
+                <button class="nav-item" data-target="expenses"><i class="fas fa-money-bill-wave"></i> Gastos</button>
+                <button class="nav-item" data-target="accounting-report"><i class="fas fa-file-invoice-dollar"></i> Informe Contable</button>
+            </nav>
+            <div class="sidebar-footer">
+                <p>Admin Panel</p>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Global Top Bar -->
+            <div class="global-top-bar">
+                <label for="global-period-select"><i class="fas fa-calendar-check"></i> Período de Trabajo:</label>
+                <select id="global-period-select" onchange="changeActivePeriod()">
+                </select>
+            </div>
+
+            <!-- Dashboard View -->
+            <section id="dashboard" class="view-section active">
+                <header>
+                    <h1>Panel Financiero <span id="period-badge" class="badge"></span></h1>
+                    <button class="btn btn-primary" onclick="exportDashboardExcel()"><i class="fas fa-file-excel"></i> Descargar informe Excel</button>
+                </header>
+                <p id="dash-period-label" style="margin: -0.5rem 0 1rem 0; font-size: 0.9rem; color: #64748b;"></p>
+                <div class="stats-grid dash-stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-chart-bar"></i></div>
+                        <div class="stat-info">
+                            <h3>Ingresos (ventas)</h3>
+                            <p id="dash-sales">$0.00</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon alert"><i class="fas fa-boxes"></i></div>
+                        <div class="stat-info">
+                            <h3>Costo de ventas (COGS)</h3>
+                            <p id="dash-cogs">$0.00</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon success"><i class="fas fa-chart-line"></i></div>
+                        <div class="stat-info">
+                            <h3>Utilidad bruta</h3>
+                            <p id="dash-gross-profit">$0.00</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon alert"><i class="fas fa-receipt"></i></div>
+                        <div class="stat-info">
+                            <h3>Gastos operativos</h3>
+                            <p id="dash-expenses">$0.00</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon success"><i class="fas fa-wallet"></i></div>
+                        <div class="stat-info">
+                            <h3>Utilidad operativa</h3>
+                            <p id="dash-utility">$0.00</p>
+                        </div>
+                    </div>
+                </div>
+                <p id="dash-mercancia-note" style="font-size: 0.8rem; color: #64748b; margin-bottom: 0.5rem;"></p>
+                <div style="display: flex; flex-wrap: wrap; align-items: center; gap: 1.5rem; margin-bottom: 1rem; padding: 0.75rem 1rem; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-university" style="color: #0284c7; font-size: 1.1rem;"></i>
+                        <span style="font-size: 0.9rem;">
+                            <strong>Saldo en banco:</strong> 
+                            Inicial: <span id="dash-opening-bank">$0</span> | 
+                            Final: <span id="dash-closing-bank">$0</span>
+                        </span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-wallet" style="color: #10b981; font-size: 1.1rem;"></i>
+                        <span style="font-size: 0.9rem;">
+                            <strong>Saldo en efectivo:</strong> 
+                            Inicial: <span id="dash-opening-cash">$0</span> | 
+                            Final: <span id="dash-closing-cash">$0</span>
+                        </span>
+                    </div>
+                    <button type="button" class="btn btn-small btn-primary" onclick="openOpeningCashModal()" style="margin-left: auto;"><i class="fas fa-coins"></i> Configurar saldos iniciales</button>
+                </div>
+                <div class="charts-container">
+                    <div class="chart-card">
+                        <h3>Resultado del período activo</h3>
+                        <canvas id="mainChart"></canvas>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Inventory View -->
+            <section id="inventory" class="view-section">
+                <header>
+                    <h1>Inventario</h1>
+                    <button class="btn btn-primary" onclick="exportInventoryExcel()"><i class="fas fa-file-excel"></i> Descargar informe Excel</button>
+                </header>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-box"></i></div>
+                        <div class="stat-info">
+                            <h3>Total Productos Activos</h3>
+                            <p id="inv-total-products">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
+                        <div class="stat-info">
+                            <h3>Valor al Costo</h3>
+                            <p id="inv-total-cost">$0.00</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon success"><i class="fas fa-tags"></i></div>
+                        <div class="stat-info">
+                            <h3>Stock Total</h3>
+                            <p id="inv-total-stock">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon alert"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="stat-info">
+                            <h3>Stock Bajo</h3>
+                            <p id="inv-low-stock">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="inventory-period-warning" class="period-closed-warning">
+                    <i class="fas fa-lock"></i> Este período está cerrado. No se permite modificar información.
+                </div>
+
+                <div class="inv-tabs">
+                    <button class="inv-tab active" data-target="inv-products">Productos</button>
+                    <button class="inv-tab" data-target="inv-suppliers">Proveedores</button>
+                    <button class="inv-tab" data-target="inv-entradas">Entradas</button>
+                    <button class="inv-tab" data-target="inv-salidas">Salidas / Ajustes</button>
+                    <button class="inv-tab" data-target="inv-movimientos">Movimientos / Kardex</button>
+                </div>
+
+                <!-- Products Tab -->
+                <div id="inv-products" class="inv-section active">
+                    <div style="margin-bottom: 1rem; text-align: right;">
+                        <button class="btn btn-primary btn-period-dependent" onclick="openModal('inventory-modal')"><i class="fas fa-plus"></i> Nuevo Producto</button>
+                    </div>
+                    <div class="table-container">
+                        <table id="inventory-table">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Nombre</th>
+                                    <th>Categoría</th>
+                                    <th>Stock Actual</th>
+                                    <th>Stock Min.</th>
+                                    <th>Estado Stock</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Filled by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Proveedores Tab -->
+                <div id="inv-suppliers" class="inv-section">
+                    <div style="margin-bottom: 1rem; text-align: right;">
+                        <button class="btn btn-primary" onclick="openModal('supplier-modal', 'inventory')"><i class="fas fa-plus"></i> Crear Proveedor</button>
+                    </div>
+                    <div class="table-container">
+                        <table id="suppliers-table">
+                            <thead>
+                                <tr>
+                                    <th>Nombre / Razón Social</th>
+                                    <th>NIT / Identificación</th>
+                                    <th>Contacto</th>
+                                    <th>Teléfono</th>
+                                    <th>Correo</th>
+                                    <th>Ciudad</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Filled by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Entradas Tab -->
+                <div id="inv-entradas" class="inv-section">
+                    <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="margin: 0; color: var(--primary-dark);">Facturas de compra de mercancía</h3>
+                            <p style="margin: 0; font-size: 0.85rem; color: #64748b;">Registra aquí únicamente mercancía comprada para vender. Las compras operativas o administrativas deben registrarse en Gastos.</p>
+                        </div>
+                        <button class="btn btn-primary btn-period-dependent" onclick="openEntradaModalForCreate()"><i class="fas fa-arrow-down"></i> Registrar Compra de Mercancía</button>
+                    </div>
+                    <div class="inv-filters" id="entradas-filters">
+                        <div class="inv-filters-row">
+                            <input type="search" id="ent-filter-search" class="inv-filter-input" placeholder="Buscar producto, proveedor, factura…" oninput="renderInventoryEntradas()">
+                            <select id="ent-filter-product" class="inv-filter-select" onchange="renderInventoryEntradas()"><option value="">Todos los productos</option></select>
+                            <select id="ent-filter-supplier" class="inv-filter-select" onchange="renderInventoryEntradas()"><option value="">Todos los proveedores</option></select>
+                            <input type="date" id="ent-filter-date-from" class="inv-filter-date" title="Fecha desde" onchange="renderInventoryEntradas()">
+                            <input type="date" id="ent-filter-date-to" class="inv-filter-date" title="Fecha hasta" onchange="renderInventoryEntradas()">
+                            <label class="inv-filter-period"><input type="checkbox" id="ent-filter-period" onchange="renderInventoryEntradas()"> Solo período activo</label>
+                            <button type="button" class="btn btn-small" onclick="clearInvFilters('ent')"><i class="fas fa-eraser"></i> Limpiar</button>
+                        </div>
+                        <div class="inv-filter-count" id="entradas-filter-count"></div>
+                    </div>
+                    <div class="table-container">
+                        <table id="entradas-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Producto</th>
+                                    <th>Proveedor</th>
+                                    <th>Cantidad</th>
+                                    <th>Costo Unit.</th>
+                                    <th>Total</th>
+                                    <th>Observación</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Filled by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Salidas / Ajustes Tab -->
+                <div id="inv-salidas" class="inv-section">
+                    <div style="margin-bottom: 1rem; text-align: right;">
+                        <button class="btn btn-primary btn-period-dependent" onclick="openModal('salida-modal')"><i class="fas fa-arrow-up"></i> Registrar Salida</button>
+                    </div>
+                    <div class="inv-filters" id="salidas-filters">
+                        <div class="inv-filters-row">
+                            <input type="search" id="sal-filter-search" class="inv-filter-input" placeholder="Buscar producto, tipo, observación…" oninput="renderInventorySalidas()">
+                            <select id="sal-filter-product" class="inv-filter-select" onchange="renderInventorySalidas()"><option value="">Todos los productos</option></select>
+                            <select id="sal-filter-reason" class="inv-filter-select" onchange="renderInventorySalidas()"><option value="">Todos los tipos</option></select>
+                            <input type="date" id="sal-filter-date-from" class="inv-filter-date" title="Fecha desde" onchange="renderInventorySalidas()">
+                            <input type="date" id="sal-filter-date-to" class="inv-filter-date" title="Fecha hasta" onchange="renderInventorySalidas()">
+                            <label class="inv-filter-period"><input type="checkbox" id="sal-filter-period" onchange="renderInventorySalidas()"> Solo período activo</label>
+                            <button type="button" class="btn btn-small" onclick="clearInvFilters('sal')"><i class="fas fa-eraser"></i> Limpiar</button>
+                        </div>
+                        <div class="inv-filter-count" id="salidas-filter-count"></div>
+                    </div>
+                    <div class="table-container">
+                        <table id="salidas-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Tipo</th>
+                                    <th>Producto</th>
+                                    <th>Cantidad</th>
+                                    <th>Observación</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Filled by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Movimientos / Kardex Tab -->
+                <div id="inv-movimientos" class="inv-section">
+                    <div style="margin-bottom: 1rem;">
+                        <h3 style="margin: 0; color: var(--primary-dark);">Kardex / Historial de Movimientos</h3>
+                        <p style="margin: 0; font-size: 0.85rem; color: #64748b;">Vista informativa en tiempo real. Se actualiza automáticamente al registrar o eliminar entradas, salidas, ajustes y ventas. No permite edición directa.</p>
+                    </div>
+                    <div class="inv-filters" id="movimientos-filters">
+                        <div class="inv-filters-row">
+                            <input type="search" id="mov-filter-search" class="inv-filter-input" placeholder="Buscar producto, proveedor, factura, motivo…" oninput="renderInventoryMovimientos()">
+                            <select id="mov-filter-product" class="inv-filter-select" onchange="renderInventoryMovimientos()"><option value="">Todos los productos</option></select>
+                            <select id="mov-filter-type" class="inv-filter-select" onchange="renderInventoryMovimientos()">
+                                <option value="">Entrada y salida</option>
+                                <option value="ENTRADA">Entrada</option>
+                                <option value="SALIDA">Salida</option>
+                            </select>
+                            <select id="mov-filter-reason" class="inv-filter-select" onchange="renderInventoryMovimientos()"><option value="">Todos los motivos</option></select>
+                            <select id="mov-filter-supplier" class="inv-filter-select" onchange="renderInventoryMovimientos()"><option value="">Todos los proveedores</option></select>
+                            <input type="date" id="mov-filter-date-from" class="inv-filter-date" title="Fecha desde" onchange="renderInventoryMovimientos()">
+                            <input type="date" id="mov-filter-date-to" class="inv-filter-date" title="Fecha hasta" onchange="renderInventoryMovimientos()">
+                            <label class="inv-filter-period"><input type="checkbox" id="mov-filter-period" onchange="renderInventoryMovimientos()"> Solo período activo</label>
+                            <button type="button" class="btn btn-small" onclick="clearInvFilters('mov')"><i class="fas fa-eraser"></i> Limpiar</button>
+                        </div>
+                        <div class="inv-filter-count" id="movimientos-filter-count"></div>
+                    </div>
+                    <div class="table-container">
+                        <table id="movements-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Tipo</th>
+                                    <th>Motivo</th>
+                                    <th>Producto</th>
+                                    <th>Proveedor</th>
+                                    <th>Factura</th>
+                                    <th>Cantidad</th>
+                                    <th>Costo Unit.</th>
+                                    <th>Valor IVA</th>
+                                    <th>Total</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Filled by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sales View -->
+            <section id="sales" class="view-section">
+                <header>
+                    <h1>Kpi Ventas</h1>
+                    <button class="btn btn-primary" onclick="exportSalesToExcel()" title="Exporta todos los clientes y las ventas que coinciden con los filtros de la tabla"><i class="fas fa-file-excel"></i> Descargar informe Excel</button>
+                </header>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
+                        <div class="stat-info"><h3>Ventas Totales</h3><p id="sales-total">$0.00</p></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-calendar-alt"></i></div>
+                        <div class="stat-info"><h3>Ventas del Mes</h3><p id="sales-month">$0.00</p></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-calculator"></i></div>
+                        <div class="stat-info"><h3>Utilidad Neta mes</h3><p id="net-profit-month">$0.00</p></div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="fas fa-star"></i></div>
+                        <div class="stat-info"><h3>Producto más Vendido mes</h3><p id="top-product-month">-</p></div>
+                    </div>
+                </div>
+
+                <div class="inv-tabs">
+                    <button class="sale-tab active" data-target="sale-clients">Clientes</button>
+                    <button class="sale-tab" data-target="sale-records">Ventas</button>
+                </div>
+
+                <!-- Clientes Sub-section -->
+                <div id="sale-clients" class="sale-section active">
+                    <div style="margin-bottom: 1rem; text-align: right;">
+                        <button class="btn btn-primary" onclick="openModal('client-modal')"><i class="fas fa-user-plus"></i> Crear Cliente</button>
+                    </div>
+                    <div class="table-container">
+                        <table id="clients-table">
+                            <thead>
+                                <tr>
+                                    <th>Nombre / Razón Social</th>
+                                    <th>NIT / Identificación</th>
+                                    <th>Contacto</th>
+                                    <th>Teléfono</th>
+                                    <th>Correo</th>
+                                    <th>Dirección</th>
+                                    <th>Ciudad</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Filled by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Ventas Sub-section -->
+                <div id="sale-records" class="sale-section">
+                    <div style="margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h3 style="margin: 0; color: var(--primary-dark);">Ventas de mercancía</h3>
+                            <p style="margin: 0; font-size: 0.85rem; color: #64748b;">Registro de ventas del período activo. Cada fila corresponde a un producto vendido.</p>
+                        </div>
+                        <button class="btn btn-primary btn-period-dependent" onclick="openSalesModalForCreate()"><i class="fas fa-plus"></i> Registrar Venta</button>
+                    </div>
+                    <div class="inv-filters" id="ventas-filters">
+                        <div class="inv-filters-row">
+                            <input type="search" id="ven-filter-search" class="inv-filter-input" placeholder="Buscar producto, cliente, pago…" oninput="renderSales()">
+                            <select id="ven-filter-product" class="inv-filter-select" onchange="renderSales()"><option value="">Todos los productos</option></select>
+                            <select id="ven-filter-client" class="inv-filter-select" onchange="renderSales()"><option value="">Todos los clientes</option></select>
+                            <select id="ven-filter-payment" class="inv-filter-select" onchange="renderSales()"><option value="">Todos los pagos</option></select>
+                            <input type="date" id="ven-filter-date-from" class="inv-filter-date" title="Fecha desde" onchange="renderSales()">
+                            <input type="date" id="ven-filter-date-to" class="inv-filter-date" title="Fecha hasta" onchange="renderSales()">
+                            <label class="inv-filter-period"><input type="checkbox" id="ven-filter-period" onchange="renderSales()"> Solo período activo</label>
+                            <button type="button" class="btn btn-small" onclick="clearSaleFilters('ven')"><i class="fas fa-eraser"></i> Limpiar</button>
+                        </div>
+                        <div class="inv-filter-count" id="ventas-filter-count"></div>
+                    </div>
+                    <div class="table-container">
+                        <table id="sales-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Producto</th>
+                                    <th>Cliente</th>
+                                    <th>Cantidad</th>
+                                    <th>Costo Unit.</th>
+                                    <th>Total</th>
+                                    <th>Método de pago</th>
+                                    <th>Observación</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Filled by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Expenses View -->
+            <section id="expenses" class="view-section">
+                <header>
+                    <h1>Egresos — Gastos Administrativos</h1>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="exportExpensesToExcel()"><i class="fas fa-file-excel"></i> Descargar informe Excel</button>
+                    </div>
+                </header>
+
+                <div id="expenses-period-warning" class="period-closed-warning">
+                    <i class="fas fa-lock"></i> Este período está cerrado. No se permiten cambios en gastos.
+                </div>
+
+                <p style="margin: 0 0 1rem 0; padding: 0.75rem 1rem; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; font-size: 0.85rem; color: #0369a1;">
+                    <strong>Regla:</strong> La mercancía para revender va en <strong>Inventario → Entradas</strong>. Los <strong>proveedores son los mismos</strong> que en Inventario (un solo directorio para compras y gastos).
+                </p>
+
+                <div class="inv-tabs">
+                    <button type="button" class="exp-tab active" data-target="exp-suppliers">Proveedores</button>
+                    <button type="button" class="exp-tab" data-target="exp-records">Gastos registrados</button>
+                </div>
+
+                <div id="exp-suppliers" class="exp-section active">
+                    <div style="margin-bottom: 1rem; text-align: right;">
+                        <button class="btn btn-primary" onclick="openModal('supplier-modal', 'expense')"><i class="fas fa-plus"></i> Crear Proveedor</button>
+                    </div>
+                    <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 1rem;">Solo proveedores de gastos. Estos proveedores no se mezclan con los proveedores de inventario.</p>
+                    <div class="table-container">
+                        <table id="exp-suppliers-table">
+                            <thead>
+                                <tr>
+                                    <th>Nombre / Razón Social</th>
+                                    <th>NIT / Identificación</th>
+                                    <th>Contacto</th>
+                                    <th>Teléfono</th>
+                                    <th>Correo</th>
+                                    <th>Ciudad</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div id="exp-records" class="exp-section">
+                    <div style="display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem;">
+                        <button class="btn btn-primary btn-period-dependent" onclick="openExpenseModalForCreate()"><i class="fas fa-plus"></i> Registrar Gasto</button>
+                    </div>
+
+                <div class="stats-grid" style="margin-bottom: 1rem;">
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <h3>Gastos del período</h3>
+                            <p id="exp-summary-total">$0.00</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-info">
+                            <h3>Compras mercancía (referencia)</h3>
+                            <p id="exp-summary-mercancia">$0.00</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="inv-filters" id="expenses-filters">
+                    <div class="inv-filters-row">
+                        <input type="search" id="exp-filter-search" class="inv-filter-input" placeholder="Buscar concepto, proveedor, factura…" oninput="renderExpenses()">
+                        <select id="exp-filter-category" class="inv-filter-select" onchange="renderExpenses()"><option value="">Todas las categorías</option></select>
+                        <select id="exp-filter-class" class="inv-filter-select" onchange="renderExpenses()">
+                            <option value="">Todas las clases</option>
+                            <option value="Operativo">Operativo</option>
+                            <option value="Administrativo">Administrativo</option>
+                            <option value="Financiero">Financiero</option>
+                        </select>
+                        <select id="exp-filter-supplier" class="inv-filter-select" onchange="renderExpenses()"><option value="">Todos los proveedores</option></select>
+                        <input type="date" id="exp-filter-date-from" class="inv-filter-date" title="Fecha desde" onchange="renderExpenses()">
+                        <input type="date" id="exp-filter-date-to" class="inv-filter-date" title="Fecha hasta" onchange="renderExpenses()">
+                        <label class="inv-filter-period"><input type="checkbox" id="exp-filter-period" onchange="renderExpenses()"> Solo período activo</label>
+                        <button type="button" class="btn btn-small" onclick="clearExpenseFilters()"><i class="fas fa-eraser"></i> Limpiar</button>
+                    </div>
+                    <div class="inv-filter-count" id="expenses-filter-count"></div>
+                </div>
+
+                <div class="table-container">
+                    <table id="expenses-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Clase</th>
+                                <th>Categoría</th>
+                                <th>Proveedor / Beneficiario</th>
+                                <th>Factura / Soporte</th>
+                                <th>Concepto / Producto</th>
+                                <th>Cant.</th>
+                                <th>P. Unit.</th>
+                                <th>IVA</th>
+                                <th>Total línea</th>
+                                <th>Método</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Filled by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                </div>
+            </section>
+
+            <!-- Accounting Report View -->
+            <section id="accounting-report" class="view-section">
+                <header>
+                    <h1>Informe Contable Integral <span id="report-period-badge" class="badge"></span></h1>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <button class="btn btn-primary" onclick="exportReportExcel()"><i class="fas fa-file-excel"></i> Descargar Excel</button>
+                        <button class="btn btn-primary" onclick="exportReportPDF()"><i class="fas fa-file-pdf"></i> Descargar PDF</button>
+                    </div>
+                </header>
+
+                <!-- Opening Balance Configuration -->
+                <div style="background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px; padding: 1.5rem; margin-bottom: 1.5rem;">
+                    <h3 style="margin-top: 0; color: #0c63e4;">Configurar Saldo Inicial del Período</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+                        <div class="form-group">
+                            <label for="report-opening-bank">Saldo en Banco ($)</label>
+                            <input type="number" id="report-opening-bank" step="0.01" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="report-opening-cash">Saldo en Efectivo ($)</label>
+                            <input type="number" id="report-opening-cash" step="0.01" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="report-opening-merchandise">Valor Mercancía ($)</label>
+                            <input type="number" id="report-opening-merchandise" step="0.01" value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="report-opening-other">Otros Activos ($)</label>
+                            <input type="number" id="report-opening-other" step="0.01" value="0">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" onclick="saveOpeningBalance()"><i class="fas fa-save"></i> Guardar Saldo Inicial</button>
+                </div>
+
+                <!-- Income Statement -->
+                <div class="report-card">
+                    <h3>Estado de Resultados / Flujo de Caja</h3>
+                    
+                    <!-- Opening Balance -->
+                    <div class="report-section">
+                        <h4>I. SALDO INICIAL DEL PERÍODO</h4>
+                        <div class="report-row">
+                            <span>Saldo en Banco:</span>
+                            <span id="rpt-opening-bank">$0.00</span>
+                        </div>
+                        <div class="report-row">
+                            <span>Saldo en Efectivo:</span>
+                            <span id="rpt-opening-cash">$0.00</span>
+                        </div>
+                        <div class="report-row">
+                            <span>Mercancía (valor):</span>
+                            <span id="rpt-opening-merchandise">$0.00</span>
+                        </div>
+                        <div class="report-row">
+                            <span>Otros Activos:</span>
+                            <span id="rpt-opening-other">$0.00</span>
+                        </div>
+                        <div class="report-row report-row-total">
+                            <span><strong>Total Saldo Inicial:</strong></span>
+                            <span id="rpt-opening-total"><strong>$0.00</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- Revenue Section -->
+                    <div class="report-section">
+                        <h4>II. INGRESOS (VENTAS)</h4>
+                        <div class="report-row">
+                            <span>Ventas (Subtotal):</span>
+                            <span id="rpt-sales-subtotal">$0.00</span>
+                        </div>
+                        <div class="report-row">
+                            <span>IVA Cobrado en Ventas:</span>
+                            <span id="rpt-sales-tax-collected">$0.00</span>
+                        </div>
+                        <div class="report-row report-row-total">
+                            <span><strong>Total Ingresos:</strong></span>
+                            <span id="rpt-sales-total"><strong>$0.00</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- COGS Section -->
+                    <div class="report-section">
+                        <h4>III. COSTO DE VENTAS (COMPRAS)</h4>
+                        <div class="report-row">
+                            <span>Compras de Mercancía:</span>
+                            <span id="rpt-cogs">$0.00</span>
+                        </div>
+                        <div class="report-row">
+                            <span>IVA en Compras:</span>
+                            <span id="rpt-purchase-tax">$0.00</span>
+                        </div>
+                        <div class="report-row">
+                            <span>Inventario Final (valor):</span>
+                            <span id="rpt-ending-inventory">$0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Gross Profit -->
+                    <div class="report-section">
+                        <div class="report-row report-row-highlight">
+                            <span><strong>UTILIDAD BRUTA (Ventas - Compras):</strong></span>
+                            <span id="rpt-gross-profit"><strong style="color: #059669;">$0.00</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- Operating Expenses -->
+                    <div class="report-section">
+                        <h4>IV. GASTOS OPERATIVOS</h4>
+                        <div id="report-expenses-list">
+                            <!-- Filled by JS -->
+                        </div>
+                        <div class="report-row">
+                            <span>IVA en Gastos:</span>
+                            <span id="rpt-expense-tax">$0.00</span>
+                        </div>
+                        <div class="report-row report-row-total">
+                            <span><strong>Total Gastos:</strong></span>
+                            <span id="rpt-total-expenses"><strong>$0.00</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- Operating Profit -->
+                    <div class="report-section">
+                        <div class="report-row report-row-highlight">
+                            <span><strong>UTILIDAD OPERATIVA (Bruta - Gastos):</strong></span>
+                            <span id="rpt-operating-profit"><strong style="color: #0c63e4;">$0.00</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- Tax Summary -->
+                    <div class="report-section">
+                        <h4>V. RESUMEN FISCAL (IVA)</h4>
+                        <div class="report-row">
+                            <span>IVA Cobrado:</span>
+                            <span id="rpt-tax-collected">$0.00</span>
+                        </div>
+                        <div class="report-row">
+                            <span>IVA Pagado (Compras):</span>
+                            <span id="rpt-tax-purchase">$0.00</span>
+                        </div>
+                        <div class="report-row">
+                            <span>IVA Pagado (Gastos):</span>
+                            <span id="rpt-tax-expense">$0.00</span>
+                        </div>
+                        <div class="report-row report-row-total">
+                            <span><strong>IVA Neto a Pagar:</strong></span>
+                            <span id="rpt-net-tax"><strong>$0.00</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- Cash Position -->
+                    <div class="report-section">
+                        <h4>VI. FLUJO DE CAJA</h4>
+                        <div class="report-row" style="background: #f8fafc; font-weight: bold; padding: 0.25rem 0.5rem; margin-top: 0.5rem;">
+                            <span>Banco:</span>
+                        </div>
+                        <div class="report-row" style="padding-left: 1rem;">
+                            <span>Saldo Inicial Banco:</span>
+                            <span id="rpt-bank-opening">$0.00</span>
+                        </div>
+                        <div class="report-row" style="padding-left: 1rem;">
+                            <span>Entradas Banco:</span>
+                            <span id="rpt-bank-inflows">$0.00</span>
+                        </div>
+                        <div class="report-row" style="padding-left: 1rem;">
+                            <span>Salidas Banco (Compras + Gastos):</span>
+                            <span id="rpt-bank-outflows">$0.00</span>
+                        </div>
+                        <div class="report-row" style="padding-left: 1rem; font-weight: 500;">
+                            <span>Saldo Final Banco Estimado:</span>
+                            <span id="rpt-bank-closing">$0.00</span>
+                        </div>
+
+                        <div class="report-row" style="background: #f8fafc; font-weight: bold; padding: 0.25rem 0.5rem; margin-top: 0.5rem;">
+                            <span>Efectivo (Caja):</span>
+                        </div>
+                        <div class="report-row" style="padding-left: 1rem;">
+                            <span>Saldo Inicial Efectivo:</span>
+                            <span id="rpt-cash-opening">$0.00</span>
+                        </div>
+                        <div class="report-row" style="padding-left: 1rem;">
+                            <span>Entradas Efectivo:</span>
+                            <span id="rpt-cash-inflows">$0.00</span>
+                        </div>
+                        <div class="report-row" style="padding-left: 1rem;">
+                            <span>Salidas Efectivo (Gastos):</span>
+                            <span id="rpt-cash-outflows">$0.00</span>
+                        </div>
+                        <div class="report-row report-row-highlight" style="margin-top: 0.5rem;">
+                            <span><strong>Saldo Final Efectivo Estimado:</strong></span>
+                            <span id="rpt-cash-closing"><strong style="color: #059669;">$0.00</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- Summary -->
+                    <div class="report-section">
+                        <h4>VII. RESUMEN EJECUTIVO</h4>
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                <td style="padding: 0.75rem 0;">Total Ventas:</td>
+                                <td style="padding: 0.75rem 0; text-align: right;"><strong id="rpt-sum-sales">$0.00</strong></td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                <td style="padding: 0.75rem 0;">Total Compras:</td>
+                                <td style="padding: 0.75rem 0; text-align: right;"><strong id="rpt-sum-purchases">$0.00</strong></td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #e0e0e0;">
+                                <td style="padding: 0.75rem 0;">Utilidad Bruta:</td>
+                                <td style="padding: 0.75rem 0; text-align: right;"><strong style="color: #059669;" id="rpt-sum-gross">$0.00</strong></td>
+                            </tr>
+                            <tr style="border-bottom: 2px solid #0c63e4;">
+                                <td style="padding: 0.75rem 0;">Total Gastos:</td>
+                                <td style="padding: 0.75rem 0; text-align: right;"><strong id="rpt-sum-expenses">$0.00</strong></td>
+                            </tr>
+                            <tr style="background: #f0f9ff;">
+                                <td style="padding: 0.75rem 0;"><strong>UTILIDAD NETA:</strong></td>
+                                <td style="padding: 0.75rem 0; text-align: right;"><strong style="color: #0c63e4; font-size: 1.1rem;" id="rpt-sum-net">$0.00</strong></td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <p style="font-size: 0.85rem; color: #64748b; margin-top: 1.5rem;">
+                        <i class="fas fa-info-circle"></i> Generado: <span id="rpt-generated-date">--</span> | Período: <span id="rpt-period-label">--</span>
+                    </p>
+                </div>
+            </section>
+
+            <!-- Periods View -->
+            <section id="periods" class="view-section">
+                <header>
+                    <h1>Períodos Mensuales</h1>
+                    <button class="btn btn-primary" onclick="openModal('period-modal')"><i class="fas fa-plus"></i> Abrir Período</button>
+                </header>
+                <div class="table-container">
+                    <table id="periods-table">
+                        <thead>
+                            <tr>
+                                <th>Mes (YYYY-MM)</th>
+                                <th>Estado</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Filled by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <!-- Inventory Modal -->
+    <div id="inventory-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('inventory-modal')">&times;</span>
+            <h2>Agregar/Editar Producto</h2>
+            <form id="inventory-form" onsubmit="handleInventorySubmit(event)">
+                <input type="hidden" id="inv-id">
+                <div class="form-group">
+                    <label>Código o Referencia</label>
+                    <input type="text" id="inv-code" required>
+                </div>
+                <div class="form-group">
+                    <label>Nombre del Producto</label>
+                    <input type="text" id="inv-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Categoría</label>
+                    <input type="text" id="inv-category" required>
+                </div>
+                <div class="form-group">
+                    <label>Stock Mínimo</label>
+                    <input type="number" id="inv-min-stock" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Estado</label>
+                    <select id="inv-status">
+                        <option value="Activo">Activo</option>
+                        <option value="Inactivo">Inactivo</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary btn-full" style="margin-top: 1rem;">Guardar Producto</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Entrada Modal -->
+    <div id="entrada-modal" class="modal">
+        <div class="modal-content" style="max-width: 850px;">
+            <span class="close" onclick="closeModal('entrada-modal')">&times;</span>
+            <h2 id="entrada-modal-title">Registrar Compra de Mercancía (Factura)</h2>
+            <p id="entrada-modal-subtitle" style="color: #64748b; font-size: 0.9rem; margin-top: -10px; margin-bottom: 20px;">Esta factura aumentará el inventario de los productos seleccionados.</p>
+            <form id="entrada-form" onsubmit="handleEntradaSubmit(event)">
+                <div style="display: grid; grid-template-columns: 1.5fr 1.5fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div class="form-group">
+                        <label>Fecha</label>
+                        <input type="date" id="ent-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Proveedor</label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <select id="ent-supplier" required style="flex: 1;">
+                                <option value="">Seleccione un proveedor</option>
+                            </select>
+                            <button type="button" class="btn btn-primary btn-small" onclick="openModal('supplier-modal', 'inventory')" title="Nuevo Proveedor"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Número de Factura</label>
+                        <input type="text" id="ent-invoice" required>
+                    </div>
+                </div>
+
+                <div style="background: #f1f5f9; padding: 1.2rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid #cbd5e1;">
+                    <h4 style="margin-top:0; margin-bottom:1rem; color: var(--primary-dark);">Agregar Productos a la Factura</h4>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 0.8rem; align-items: end;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Producto</label>
+                            <select id="ent-product-select">
+                                <option value="">Seleccione un producto</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Cantidad</label>
+                            <input type="number" id="ent-qty-input" min="1" value="1">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Costo Unit.</label>
+                            <input type="number" id="ent-cost-input" min="0" step="0.01" value="0">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>IVA %</label>
+                            <input type="number" id="ent-iva-input" min="0" value="19">
+                        </div>
+                        <button type="button" class="btn btn-success" style="height: 42px; width: 42px; display: flex; align-items: center; justify-content: center;" onclick="addInvoiceItem()"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+
+                <div class="table-container" style="max-height: 250px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px;">
+                    <table id="invoice-items-table">
+                        <thead>
+                            <tr style="background: #f8fafc;">
+                                <th>Producto</th>
+                                <th style="text-align: center;">Cant.</th>
+                                <th style="text-align: right;">Costo Unit.</th>
+                                <th style="text-align: right;">IVA</th>
+                                <th style="text-align: right;">Total</th>
+                                <th style="text-align: center;">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: stretch; gap: 2rem; margin-top: 1.5rem;">
+                    <div style="flex: 1; display: flex; flex-direction: column; gap: 1rem; min-width: 0;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Observaciones generales</label>
+                            <textarea id="ent-obs" rows="2" style="width: 100%; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; padding: 0.5rem;"></textarea>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 0.9rem; display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.35rem;">
+                                <i class="fas fa-file-pdf" style="color: #dc2626;"></i> Factura de compra (PDF)
+                            </label>
+                            <div style="width: 100%; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; padding: 0.5rem; background: #fff;">
+                                <input type="file" id="ent-invoice-pdf" accept=".pdf,application/pdf" onchange="onEntradaPdfSelected(event)" style="width: 100%; font-size: 0.85rem; box-sizing: border-box;">
+                                <p id="ent-invoice-pdf-name" style="font-size: 0.75rem; color: #64748b; margin: 0.35rem 0 0 0;">Opcional. Máx. 8 MB.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="entrada-totals-box">
+                        <div class="entrada-totals-row">
+                            <span class="entrada-totals-label">Subtotal (Bruto)</span>
+                            <span id="ent-invoice-subtotal" class="entrada-totals-value">$0.00</span>
+                        </div>
+                        <div class="entrada-totals-row">
+                            <span class="entrada-totals-label">Total IVA</span>
+                            <span id="ent-invoice-iva" class="entrada-totals-value">$0.00</span>
+                        </div>
+                        <div class="entrada-totals-row entrada-totals-row--grand">
+                            <span class="entrada-totals-label">Total a pagar</span>
+                            <span id="ent-invoice-total" class="entrada-totals-value entrada-totals-value--grand">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100" style="margin-top: 1.5rem; padding: 1rem; font-size: 1.1rem; font-weight: 600;">
+                    <i class="fas fa-save" style="margin-right: 0.5rem;"></i> <span id="entrada-submit-label">Finalizar y Guardar Factura</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Entrada Modal -->
+    <div id="edit-entrada-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close" onclick="closeModal('edit-entrada-modal')">&times;</span>
+            <h2>Editar Entrada de Mercancía</h2>
+            <form id="edit-entrada-form" onsubmit="handleEditEntradaSubmit(event)">
+                <input type="hidden" id="edit-ent-id">
+                <div class="form-group">
+                    <label>Fecha</label>
+                    <input type="date" id="edit-ent-date" required>
+                </div>
+                <div class="form-group">
+                    <label>Cantidad</label>
+                    <input type="number" id="edit-ent-qty" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label>Costo Unitario (Bruto)</label>
+                    <input type="number" id="edit-ent-cost" step="0.01" required>
+                </div>
+                <div class="form-group">
+                    <label>IVA %</label>
+                    <input type="number" id="edit-ent-iva" min="0" value="19">
+                </div>
+                <div class="form-group">
+                    <label>Observación</label>
+                    <input type="text" id="edit-ent-obs">
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Actualizar Entrada</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Salida Modal -->
+    <div id="edit-salida-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close" onclick="closeModal('edit-salida-modal')">&times;</span>
+            <h2>Editar Salida / Ajuste</h2>
+            <form id="edit-salida-form" onsubmit="handleEditSalidaSubmit(event)">
+                <input type="hidden" id="edit-sal-id">
+                <div class="form-group">
+                    <label>Fecha</label>
+                    <input type="date" id="edit-sal-date" required>
+                </div>
+                <div class="form-group">
+                    <label>Tipo de Salida</label>
+                    <select id="edit-sal-reason" required>
+                        <option value="Daño">Daño</option>
+                        <option value="Pérdida">Pérdida</option>
+                        <option value="Ajuste">Ajuste</option>
+                        <option value="Devolución a proveedor">Devolución a proveedor</option>
+                        <option value="Uso interno">Uso interno</option>
+                        <option value="Muestra comercial">Muestra comercial</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Cantidad</label>
+                    <input type="number" id="edit-sal-qty" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label>Observación (Opcional)</label>
+                    <input type="text" id="edit-sal-obs">
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Actualizar Salida</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Salida Modal -->
+    <div id="salida-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('salida-modal')">&times;</span>
+            <h2>Registrar Salida / Ajuste</h2>
+            <form id="salida-form" onsubmit="handleSalidaSubmit(event)">
+                <div class="form-group">
+                    <label>Fecha</label>
+                    <input type="date" id="sal-date" required>
+                </div>
+                <div class="form-group">
+                    <label>Tipo de Salida</label>
+                    <select id="sal-reason" required>
+                        <option value="Daño">Daño</option>
+                        <option value="Pérdida">Pérdida</option>
+                        <option value="Ajuste">Ajuste</option>
+                        <option value="Devolución a proveedor">Devolución a proveedor</option>
+                        <option value="Uso interno">Uso interno</option>
+                        <option value="Muestra comercial">Muestra comercial</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Producto</label>
+                    <select id="sal-product" required>
+                        <!-- Filled dynamically -->
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Cantidad</label>
+                    <input type="number" id="sal-qty" min="1" required>
+                </div>
+                <div class="form-group">
+                    <label>Observación (Opcional)</label>
+                    <input type="text" id="sal-obs">
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Guardar Salida</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sales Modal -->
+    <div id="sales-modal" class="modal">
+        <div class="modal-content" style="max-width: 850px;">
+            <span class="close" onclick="closeModal('sales-modal')">&times;</span>
+            <h2 id="sales-modal-title">Registrar Venta</h2>
+            <p id="sales-modal-subtitle" style="color: #64748b; font-size: 0.9rem; margin-top: -10px; margin-bottom: 20px;">Agregue los productos vendidos. El inventario se actualizará al guardar.</p>
+            <form id="sales-form" onsubmit="handleSalesSubmit(event)">
+                <div style="display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div class="form-group">
+                        <label>Fecha</label>
+                        <input type="date" id="sale-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Cliente</label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <select id="sale-client" required style="flex: 1;" onchange="onSaleClientChange()">
+                                <option value="">Seleccione un cliente</option>
+                            </select>
+                            <button type="button" class="btn btn-primary btn-small" onclick="openModal('client-modal')" title="Nuevo Cliente"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Método de Pago</label>
+                        <select id="sale-payment">
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Transferencia">Transferencia</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>Nº factura DIAN (opcional)</label>
+                        <input type="text" id="sale-invoice-number" placeholder="Ej. FV-12345">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1.5rem; font-size: 0.85rem; color: #64748b; margin-bottom: 1.25rem; padding: 0.65rem 0.9rem; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+                    <div><strong>NIT / Identificación:</strong> <span id="selected-client-nit">-</span></div>
+                    <div><strong>Correo electrónico:</strong> <span id="selected-client-email">-</span></div>
+                </div>
+                <div style="display: none;" aria-hidden="true">
+                    <select id="sale-id-type" disabled>
+                        <option value="CC">CC</option>
+                        <option value="NIT">NIT</option>
+                        <option value="CE">CE</option>
+                    </select>
+                    <input type="text" id="sale-id-number" / disabled>
+                    <input type="email" id="sale-email" / disabled>
+                    <select id="sale-fiscal-regime" disabled>
+                        <option value="Común">Común</option>
+                        <option value="Simplificado">Simplificado</option>
+                    </select>
+                </div>
+
+                <div id="sale-add-products-section" style="background: #f1f5f9; padding: 1.2rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid #cbd5e1;">
+                    <h4 style="margin-top:0; margin-bottom:1rem; color: var(--primary-dark);">Agregar Productos a la Venta</h4>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 0.8rem; align-items: end;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Producto</label>
+                            <select id="sale-product" onchange="updateSaleProductPrice()">
+                                <option value="">Seleccione un producto</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Cantidad</label>
+                            <input type="number" id="sale-qty" min="1" value="1">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Precio Unit.</label>
+                            <input type="number" id="sale-price" min="0" step="0.01" value="0">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>IVA %</label>
+                            <input type="number" id="sale-item-iva" min="0" value="19" step="0.01">
+                        </div>
+                        <button type="button" class="btn btn-success" style="height: 42px; width: 42px; display: flex; align-items: center; justify-content: center;" onclick="addSaleItem()"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+
+                <div class="table-container" style="max-height: 250px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 1.5rem;">
+                    <table id="sale-items-table">
+                        <thead>
+                            <tr style="background: #f8fafc;">
+                                <th>Producto</th>
+                                <th style="text-align: center;">Cant.</th>
+                                <th style="text-align: right;">Precio Unit.</th>
+                                <th style="text-align: right;">IVA</th>
+                                <th style="text-align: right;">Total</th>
+                                <th style="text-align: center;">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: stretch; gap: 2rem;">
+                    <div style="flex: 1; display: flex; flex-direction: column; gap: 1rem; min-width: 0;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label>Observaciones (opcional)</label>
+                            <textarea id="sale-obs" rows="2" style="width: 100%; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; padding: 0.5rem;"></textarea>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 0.9rem; display: flex; align-items: center; gap: 0.35rem; margin-bottom: 0.35rem;">
+                                <i class="fas fa-file-pdf" style="color: #dc2626;"></i> Factura electrónica DIAN (PDF)
+                            </label>
+                            <div style="width: 100%; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; padding: 0.5rem; background: #fff;">
+                                <input type="file" id="sale-dian-pdf" accept=".pdf,application/pdf" onchange="onSaleDianPdfSelected(event)" style="width: 100%; font-size: 0.85rem; box-sizing: border-box;">
+                                <p id="sale-dian-pdf-name" style="font-size: 0.75rem; color: #64748b; margin: 0.35rem 0 0 0;">Opcional. Máx. 8 MB.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="entrada-totals-box">
+                        <div class="entrada-totals-row">
+                            <span class="entrada-totals-label">Subtotal (Bruto)</span>
+                            <span id="sale-subtotal" class="entrada-totals-value">$0.00</span>
+                        </div>
+                        <div class="entrada-totals-row">
+                            <span class="entrada-totals-label">Total IVA</span>
+                            <span id="sale-iva-amount" class="entrada-totals-value">$0.00</span>
+                        </div>
+                        <div class="entrada-totals-row">
+                            <span class="entrada-totals-label entrada-totals-label--with-input">
+                                Retención
+                                <input type="number" id="sale-retentions" class="entrada-totals-inline-input" value="0" min="0" max="100" step="0.01" oninput="renderSaleItems()">%
+                            </span>
+                            <span id="sale-retentions-amount" class="entrada-totals-value">$0.00</span>
+                        </div>
+                        <div class="entrada-totals-row entrada-totals-row--grand">
+                            <span class="entrada-totals-label">Total a cobrar</span>
+                            <span id="sale-total" class="entrada-totals-value entrada-totals-value--grand">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100" style="margin-top: 1.5rem; padding: 1rem; font-size: 1.1rem; font-weight: 600;">
+                    <i class="fas fa-file-invoice-dollar" style="margin-right: 0.5rem;"></i>
+                    <span id="sales-submit-label">Finalizar y Guardar Venta</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Opening cash modal -->
+    <div id="opening-cash-modal" class="modal">
+        <div class="modal-content" style="max-width: 420px;">
+            <span class="close" onclick="closeModal('opening-cash-modal')">&times;</span>
+            <h2>Saldos Iniciales del Período</h2>
+            <p style="color: #64748b; font-size: 0.85rem;">Monto con el que inicia el período actual en banco y en efectivo. Se usará para estimar los saldos finales.</p>
+            <form id="opening-cash-form" onsubmit="saveOpeningCash(event)">
+                <div class="form-group">
+                    <label>Saldo inicial en banco (COP)</label>
+                    <input type="number" id="opening-bank-input" step="1" required placeholder="10000000">
+                </div>
+                <div class="form-group">
+                    <label>Saldo inicial en efectivo (COP)</label>
+                    <input type="number" id="opening-cash-input" step="1" required placeholder="500000">
+                </div>
+                <button type="submit" class="btn btn-primary btn-full">Guardar saldos iniciales</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Expense Modal -->
+    <div id="expenses-modal" class="modal">
+        <div class="modal-content" style="max-width: 850px;">
+            <span class="close" onclick="closeModal('expenses-modal')">&times;</span>
+            <h2 id="expense-modal-title">Registrar Gasto Administrativo / Operativo</h2>
+            <p style="color: #64748b; font-size: 0.85rem; margin-top: -8px; margin-bottom: 1rem;">¿Es mercancía para vender? Use <strong>Inventario → Entradas</strong>, no este formulario.</p>
+            <form id="expenses-form" onsubmit="handleExpenseSubmit(event)">
+                <input type="hidden" id="exp-id">
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Fecha</label>
+                        <input type="date" id="exp-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Categoría</label>
+                        <select id="exp-category" required onchange="updateExpenseClassPreview()">
+                            <option value="">Seleccione una categoría</option>
+                            <option value="Arriendo">Arriendo</option>
+                            <option value="Servicios públicos">Servicios públicos</option>
+                            <option value="Internet / telefonía">Internet / telefonía</option>
+                            <option value="Transporte">Transporte</option>
+                            <option value="Papelería">Papelería</option>
+                            <option value="Empaques">Empaques</option>
+                            <option value="Publicidad">Publicidad</option>
+                            <option value="Aseo">Aseo</option>
+                            <option value="Mantenimiento">Mantenimiento</option>
+                            <option value="Comisiones bancarias">Comisiones bancarias</option>
+                            <option value="Honorarios">Honorarios</option>
+                            <option value="Equipos / muebles">Equipos / muebles</option>
+                            <option value="Software / suscripciones">Software / suscripciones</option>
+                            <option value="Otros">Otros</option>
+                        </select>
+                    </div>
+                </div>
+                <p id="exp-class-preview" style="font-size: 0.8rem; color: #64748b; margin: -0.5rem 0 1rem 0;">Clase contable: —</p>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Proveedor / Beneficiario</label>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <select id="exp-supplier" style="flex: 1;">
+                                <option value="">Sin proveedor / beneficiario</option>
+                            </select>
+                            <button type="button" class="btn btn-primary btn-small" onclick="openModal('supplier-modal', 'expense')" title="Nuevo proveedor"><i class="fas fa-plus"></i></button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Nro. Factura / Soporte</label>
+                        <input type="text" id="exp-invoice">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Soporte de factura (PDF)</label>
+                    <input type="file" id="exp-invoice-file" accept=".pdf,application/pdf" onchange="onExpenseInvoiceFileSelected(event)" style="width:100%; font-size: 0.95rem; box-sizing: border-box;">
+                    <p id="exp-invoice-file-label" style="font-size:0.8rem; color:#64748b; margin:0.35rem 0 0 0;">Sin archivo adjunto.</p>
+                </div>
+
+                <div class="form-group">
+                    <label>Método de Pago</label>
+                    <select id="exp-payment-method">
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="Transferencia">Transferencia</option>
+                    </select>
+                </div>
+
+                <div id="exp-add-lines-section" style="background: #f1f5f9; padding: 1.2rem; border-radius: 8px; margin-bottom: 1.5rem; border: 1px solid #cbd5e1;">
+                    <h4 style="margin-top:0; margin-bottom:1rem; color: var(--primary-dark);">Detalle de productos / conceptos</h4>
+                    <div style="display: grid; grid-template-columns: 2fr 0.7fr 1fr 0.8fr auto; gap: 0.8rem; align-items: end;">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Concepto o producto</label>
+                            <input type="text" id="exp-line-desc" placeholder="Ej. Papelería, servicio, insumo">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Cantidad</label>
+                            <input type="number" id="exp-line-qty" min="1" value="1">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>Valor unitario</label>
+                            <input type="number" id="exp-line-price" min="0" step="0.01" value="0">
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;">
+                            <label>IVA %</label>
+                            <input type="number" id="exp-line-iva" min="0" value="19" step="0.01">
+                        </div>
+                        <button type="button" class="btn btn-success" style="height: 42px; width: 42px;" onclick="addExpenseItem()" title="Agregar línea"><i class="fas fa-plus"></i></button>
+                    </div>
+                </div>
+
+                <div class="table-container" style="max-height: 220px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 1rem;">
+                    <table id="expense-items-table">
+                        <thead>
+                            <tr style="background: #f8fafc;">
+                                <th>Concepto</th>
+                                <th style="text-align:center;">Cant.</th>
+                                <th style="text-align:right;">P. Unit.</th>
+                                <th style="text-align:right;">IVA</th>
+                                <th style="text-align:right;">Total</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div class="entrada-totals-box" style="margin-bottom: 1rem;">
+                    <div class="entrada-totals-row">
+                        <span class="entrada-totals-label">Subtotal</span>
+                        <span id="exp-invoice-subtotal" class="entrada-totals-value">$0.00</span>
+                    </div>
+                    <div class="entrada-totals-row">
+                        <span class="entrada-totals-label">Total IVA</span>
+                        <span id="exp-invoice-iva" class="entrada-totals-value">$0.00</span>
+                    </div>
+                    <div class="entrada-totals-row entrada-totals-row--grand">
+                        <span class="entrada-totals-label">Total factura</span>
+                        <span id="exp-invoice-total" class="entrada-totals-value entrada-totals-value--grand">$0.00</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Observaciones</label>
+                    <textarea id="exp-obs" rows="2" style="width:100%; border:1px solid #ddd; border-radius:4px; padding:0.5rem;"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100" style="padding: 1rem; font-weight: 600;">
+                    <i class="fas fa-save"></i> <span id="expense-submit-label">Guardar gasto</span>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Period Modal -->
+    <div id="period-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('period-modal')">&times;</span>
+            <h2>Abrir Nuevo Período</h2>
+            <form id="period-form" onsubmit="handlePeriodSubmit(event)">
+                <div class="form-group">
+                    <label>Mes (YYYY-MM)</label>
+                    <input type="month" id="period-month" required>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Crear Período</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Supplier Modal -->
+    <div id="supplier-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('supplier-modal')">&times;</span>
+            <h2 id="supplier-modal-title">Registrar Proveedor</h2>
+            <form id="supplier-form" onsubmit="handleSupplierSubmit(event)">
+                <input type="hidden" id="supp-id">
+                <div class="form-group">
+                    <label>Nombre o Razón Social</label>
+                    <input type="text" id="supp-name" required>
+                </div>
+                <div class="form-group">
+                    <label>NIT o Identificación</label>
+                    <input type="text" id="supp-nit">
+                </div>
+                <div class="form-group">
+                    <label>Nombre de Contacto</label>
+                    <input type="text" id="supp-contact">
+                </div>
+                <div class="form-group">
+                    <label>Teléfono</label>
+                    <input type="text" id="supp-phone">
+                </div>
+                <div class="form-group">
+                    <label>Correo Electrónico</label>
+                    <input type="email" id="supp-email">
+                </div>
+                <div class="form-group">
+                    <label>Dirección</label>
+                    <input type="text" id="supp-address">
+                </div>
+                <div class="form-group">
+                    <label>Ciudad</label>
+                    <input type="text" id="supp-city">
+                </div>
+                <div class="form-group">
+                    <label>Observación</label>
+                    <textarea id="supp-obs" rows="2" style="width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 0.5rem;"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Tipo de proveedor</label>
+                    <select id="supp-type">
+                        <option value="inventory">Proveedor de Inventario</option>
+                        <option value="expense">Proveedor de Gastos</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Estado</label>
+                    <select id="supp-status">
+                        <option value="Activo">Activo</option>
+                        <option value="Inactivo">Inactivo</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Guardar Proveedor</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Client Modal -->
+    <div id="client-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('client-modal')">&times;</span>
+            <h2 id="client-modal-title">Registrar Cliente</h2>
+            <form id="client-form" onsubmit="handleClientSubmit(event)">
+                <input type="hidden" id="cli-id">
+                <div class="form-group">
+                    <label>Nombre o Razón Social</label>
+                    <input type="text" id="cli-name" required>
+                </div>
+                <div class="form-group">
+                    <label>NIT o Identificación</label>
+                    <input type="text" id="cli-nit">
+                </div>
+                <div class="form-group">
+                    <label>Nombre de Contacto</label>
+                    <input type="text" id="cli-contact">
+                </div>
+                <div class="form-group">
+                    <label>Teléfono</label>
+                    <input type="text" id="cli-phone">
+                </div>
+                <div class="form-group">
+                    <label>Correo Electrónico</label>
+                    <input type="email" id="cli-email">
+                </div>
+                <div class="form-group">
+                    <label>Dirección</label>
+                    <input type="text" id="cli-address">
+                </div>
+                <div class="form-group">
+                    <label>Ciudad</label>
+                    <input type="text" id="cli-city">
+                </div>
+                <div class="form-group">
+                    <label>Observación</label>
+                    <textarea id="cli-obs" rows="2" style="width: 100%; border: 1px solid #ddd; border-radius: 4px; padding: 0.5rem;"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Estado</label>
+                    <select id="cli-status">
+                        <option value="Activo">Activo</option>
+                        <option value="Inactivo">Inactivo</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Guardar Cliente</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js?v=demo-relative-api"></script>
+</body>
+</html>
